@@ -225,7 +225,7 @@ public class PlayerFrame extends JFrame implements KeyListener {
     }
 
     public static void main(String[] args) {
-        PlayerFrame pf = new PlayerFrame(640, 480, 3);
+        PlayerFrame pf = new PlayerFrame(640, 480, 2);
         pf.connectToServer();
         pf.setUpGUI();
     }

@@ -20,7 +20,7 @@ public class GameServer {
     public GameServer() {
         System.out.println("=====GAME SERVER======");
         numPlayers = 0;
-        maxPlayers = 3; // Set maximum number of players here
+        maxPlayers = 2; // Set maximum number of players here
 
         playerSockets = new ArrayList<>();
         readRunnables = new ArrayList<>();
