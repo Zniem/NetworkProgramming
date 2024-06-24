@@ -3,29 +3,36 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 public class GameServer {
     private ServerSocket serverSocket;
     private int numPlayers;
     private int maxPlayers;
 
-    private Socket p1Socket;
-    private Socket p2Socket;
-    private ReadFromClient p1ReadRunnable;
-    private ReadFromClient p2ReadRunnable;
-    private WriteToClient p1WriteRunnable;
-    private WriteToClient p2WriteRunnable;
-    private double p1x, p1y, p2x, p2y;
+    private List<Socket> playerSockets;
+    private List<ReadFromClient> readRunnables;
+    private List<WriteToClient> writeRunnables;
+    private List<Double> playerX;
+    private List<Double> playerY;
 
     public GameServer() {
         System.out.println("=====GAME SERVER======");
         numPlayers = 0;
-        maxPlayers = 2;
+        maxPlayers = 3; // Set maximum number of players here
 
-        p1x = 100;
-        p1y = 400;
-        p2x = 490;
-        p2y = 400;
+        playerSockets = new ArrayList<>();
+        readRunnables = new ArrayList<>();
+        writeRunnables = new ArrayList<>();
+        playerX = new ArrayList<>();
+        playerY = new ArrayList<>();
+
+        // Initialize player coordinates
+        for (int i = 0; i < maxPlayers; i++) {
+            playerX.add(100.0 + i * 100); // Just an example initialization
+            playerY.add(400.0);
+        }
 
         try {
             serverSocket = new ServerSocket(45371);
@@ -34,11 +41,11 @@ public class GameServer {
         }
     }
 
-    public void acceptConections(){
+    public void acceptConnections(){
         try {
-            System.out.println("waiting for conections");
+            System.out.println("waiting for connections");
 
-            while (numPlayers< maxPlayers){
+            while (numPlayers < maxPlayers){
                 Socket s = serverSocket.accept();
 
                 DataInputStream in = new DataInputStream(s.getInputStream());
@@ -51,34 +58,28 @@ public class GameServer {
                 ReadFromClient rfc = new ReadFromClient(numPlayers, in);
                 WriteToClient wtc = new WriteToClient(numPlayers, out);
 
-                if (numPlayers == 1){
-                    p1Socket = s;
-                    p1ReadRunnable = rfc;
-                    p1WriteRunnable = wtc;
-                }else {
-                    p2Socket = s;
-                    p2ReadRunnable = rfc;
-                    p2WriteRunnable = wtc;
-                    p1WriteRunnable.sendStartMsg();
-                    p2WriteRunnable.sendStartMsg();
-                    Thread readThread1 = new Thread(p1ReadRunnable);
-                    Thread readThread2 = new Thread(p2ReadRunnable);
-                    readThread1.start();
-                    readThread2.start();
-                    Thread writeThread1 = new Thread(p1WriteRunnable);
-                    Thread writeThread2 = new Thread(p1WriteRunnable);
-                    writeThread1.start();
-                    writeThread2.start();
-                }
+                playerSockets.add(s);
+                readRunnables.add(rfc);
+                writeRunnables.add(wtc);
 
+                Thread readThread = new Thread(rfc);
+                readThread.start();
+
+                if (numPlayers == maxPlayers) {
+                    for (WriteToClient writeRunnable : writeRunnables) {
+                        writeRunnable.sendStartMsg();
+                        Thread writeThread = new Thread(writeRunnable);
+                        writeThread.start();
+                    }
+                }
             }
-            System.out.println("No longer accepting conections");
-        }catch (IOException e){
+            System.out.println("No longer accepting connections");
+        } catch (IOException e){
             throw new RuntimeException(e);
         }
     }
 
-    private class ReadFromClient implements Runnable{
+    private class ReadFromClient implements Runnable {
         private int playerId;
         private DataInputStream dataIn;
 
@@ -90,24 +91,18 @@ public class GameServer {
 
         @Override
         public void run() {
-            try{
+            try {
                 while (true){
-                    if (playerId == 1){
-                        p1x = dataIn.readDouble();
-                        p1y = dataIn.readDouble();
-                    }else {
-                        p2x = dataIn.readDouble();
-                        p2y = dataIn.readDouble();
-                    }
+                    playerX.set(playerId - 1, dataIn.readDouble());
+                    playerY.set(playerId - 1, dataIn.readDouble());
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-
         }
     }
 
-    private class WriteToClient implements Runnable{
+    private class WriteToClient implements Runnable {
         private int playerId;
         private DataOutputStream dataOut;
 
@@ -121,15 +116,13 @@ public class GameServer {
         public void run() {
             try {
                 while (true){
-                    if (playerId == 1){
-                        dataOut.writeDouble(p2x);
-                        dataOut.writeDouble(p2y);
-                        dataOut.flush();
-                    }else {
-                        dataOut.writeDouble(p1x);
-                        dataOut.writeDouble(p1y);
-                        dataOut.flush();
+                    for (int i = 0; i < numPlayers; i++) {
+                        if (i != playerId - 1) {
+                            dataOut.writeDouble(playerX.get(i));
+                            dataOut.writeDouble(playerY.get(i));
+                        }
                     }
+                    dataOut.flush();
                     try {
                         Thread.sleep(25);
                     } catch (InterruptedException e) {
@@ -140,16 +133,19 @@ public class GameServer {
                 throw new RuntimeException(e);
             }
         }
+
         public void sendStartMsg(){
             try {
-                dataOut.writeUTF("We have 2 players go!");
+                dataOut.writeUTF("We have " + maxPlayers + " players go!");
+                dataOut.flush();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
     }
+
     public static void main(String[] args) {
         GameServer gameServer = new GameServer();
-        gameServer.acceptConections();
+        gameServer.acceptConnections();
     }
 }

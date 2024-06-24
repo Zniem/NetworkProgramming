@@ -8,14 +8,15 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 
-public class PlayerFrame extends JFrame implements KeyListener{
+public class PlayerFrame extends JFrame implements KeyListener {
 
     private int width, height;
     private Container contentPane;
+    private List<PlayerSprite> players;
     private PlayerSprite me;
-    private PlayerSprite enemy;
     private DrawingComponent dc;
     private Timer animationTimer;
     private boolean up;
@@ -26,11 +27,13 @@ public class PlayerFrame extends JFrame implements KeyListener{
     private int playerId;
     private ReadFromServer rfsRunnable;
     private WriteToServer wtsRunnable;
+    private int maxPlayers;
 
-
-    public PlayerFrame(int w, int h){
+    public PlayerFrame(int w, int h, int maxPlayers) {
         width = w;
         height = h;
+        this.maxPlayers = maxPlayers;
+        players = new ArrayList<>();
         up = false;
         down = false;
         left = false;
@@ -38,7 +41,7 @@ public class PlayerFrame extends JFrame implements KeyListener{
         addKeyListener(this);
     }
 
-    public void setUpGUI(){
+    public void setUpGUI() {
         contentPane = this.getContentPane();
         this.setTitle("Player #" + playerId);
         contentPane.setPreferredSize(new Dimension(width, height));
@@ -52,20 +55,20 @@ public class PlayerFrame extends JFrame implements KeyListener{
         setUpAnimationTimer();
 
         contentPane.setFocusable(true);
-
     }
 
-    private void  createSprites() {
-        if (playerId == 1) {
-            me = new PlayerSprite(100, 400, 50, Color.BLUE);
-            enemy = new PlayerSprite(490, 400, 50, Color.RED);
-        }
-        else {
-            enemy = new PlayerSprite(100, 400, 50, Color.BLUE);
-            me = new PlayerSprite(490, 400, 50, Color.RED);
+    private void createSprites() {
+        for (int i = 0; i < maxPlayers; i++) {
+            if (i + 1 == playerId) {
+                me = new PlayerSprite(100 + i * 100, 400, 50, Color.BLUE);
+                players.add(me);
+            } else {
+                players.add(new PlayerSprite(100 + i * 100, 400, 50, Color.RED));
+            }
         }
     }
-    private void  setUpAnimationTimer(){
+
+    private void setUpAnimationTimer() {
         int interval = 10;
         ActionListener al = new ActionListener() {
             @Override
@@ -74,11 +77,13 @@ public class PlayerFrame extends JFrame implements KeyListener{
                 if (up) {
                     me.moveV(-speed);
                 }
-                if (down){
+                if (down) {
                     me.moveV(speed);
-                }if (left){
+                }
+                if (left) {
                     me.moveH(-speed);
-                }if (right){
+                }
+                if (right) {
                     me.moveH(speed);
                 }
                 dc.repaint();
@@ -95,63 +100,64 @@ public class PlayerFrame extends JFrame implements KeyListener{
 
     @Override
     public void keyPressed(KeyEvent e) {
-        if (e.getKeyCode() == KeyEvent.VK_W){
+        if (e.getKeyCode() == KeyEvent.VK_W) {
             up = true;
         }
-        if (e.getKeyCode() == KeyEvent.VK_A){
-             left = true;
+        if (e.getKeyCode() == KeyEvent.VK_A) {
+            left = true;
         }
-        if (e.getKeyCode() == KeyEvent.VK_D){
+        if (e.getKeyCode() == KeyEvent.VK_D) {
             right = true;
         }
-        if (e.getKeyCode() == KeyEvent.VK_S){
+        if (e.getKeyCode() == KeyEvent.VK_S) {
             down = true;
         }
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
-        if (e.getKeyCode() == KeyEvent.VK_W){
+        if (e.getKeyCode() == KeyEvent.VK_W) {
             up = false;
-        }if (e.getKeyCode() == KeyEvent.VK_A){
+        }
+        if (e.getKeyCode() == KeyEvent.VK_A) {
             left = false;
         }
-        if (e.getKeyCode() == KeyEvent.VK_D){
+        if (e.getKeyCode() == KeyEvent.VK_D) {
             right = false;
         }
-        if (e.getKeyCode() == KeyEvent.VK_S){
+        if (e.getKeyCode() == KeyEvent.VK_S) {
             down = false;
         }
     }
 
-    private void connectToServer(){
+    private void connectToServer() {
         try {
             socket = new Socket("localhost", 45371);
             DataInputStream in = new DataInputStream(socket.getInputStream());
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
             playerId = in.readInt();
             System.out.println("You are player #" + playerId);
-            if (playerId == 1){
-                System.out.println("waiting for player 2 to connect.......");
+            if (playerId == 1) {
+                System.out.println("waiting for other players to connect.......");
             }
             rfsRunnable = new ReadFromServer(in);
             wtsRunnable = new WriteToServer(out);
             rfsRunnable.waitForStartMsg();
-        }  catch (IOException e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-
-    private class  DrawingComponent extends JComponent{
-        protected void paintComponent(Graphics g){
+    private class DrawingComponent extends JComponent {
+        protected void paintComponent(Graphics g) {
             Graphics2D g2d = (Graphics2D) g;
-            enemy.drawSprite(g2d);
-            me.drawSprite(g2d);
+            for (PlayerSprite player : players) {
+                player.drawSprite(g2d);
+            }
         }
     }
 
-    private class ReadFromServer implements Runnable{
+    private class ReadFromServer implements Runnable {
         private DataInputStream dataIn;
 
         public ReadFromServer(DataInputStream in) {
@@ -162,18 +168,23 @@ public class PlayerFrame extends JFrame implements KeyListener{
         @Override
         public void run() {
             try {
-                while (true){
-                    if (enemy != null) {
-                        enemy.setX(dataIn.readDouble());
-                        enemy.setY(dataIn.readDouble());
-                    }                }
+                while (true) {
+                    for (int i = 0; i < maxPlayers; i++) {
+                        double x = dataIn.readDouble();
+                        double y = dataIn.readDouble();
+                        if (i + 1 != playerId) {
+                            players.get(i).setX(x);
+                            players.get(i).setY(y);
+                        }
+                    }
+                }
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
 
-        public void waitForStartMsg(){
-            try{
+        public void waitForStartMsg() {
+            try {
                 String startMsg = dataIn.readUTF();
                 System.out.println("Message from server: " + startMsg);
                 Thread readThread = new Thread(rfsRunnable);
@@ -186,7 +197,7 @@ public class PlayerFrame extends JFrame implements KeyListener{
         }
     }
 
-    private class WriteToServer implements Runnable{
+    private class WriteToServer implements Runnable {
         private DataOutputStream dataOut;
 
         public WriteToServer(DataOutputStream out) {
@@ -196,13 +207,11 @@ public class PlayerFrame extends JFrame implements KeyListener{
 
         @Override
         public void run() {
-            try{
-                while (true){
-                    if (me != null) {
-                        dataOut.writeDouble(me.getX());
-                        dataOut.writeDouble(me.getY());
-                        dataOut.flush();
-                    }
+            try {
+                while (true) {
+                    dataOut.writeDouble(me.getX());
+                    dataOut.writeDouble(me.getY());
+                    dataOut.flush();
                     try {
                         Thread.sleep(25);
                     } catch (InterruptedException e) {
@@ -214,16 +223,10 @@ public class PlayerFrame extends JFrame implements KeyListener{
             }
         }
     }
+
     public static void main(String[] args) {
-        PlayerFrame pf = new PlayerFrame(640, 480);
+        PlayerFrame pf = new PlayerFrame(640, 480, 3);
         pf.connectToServer();
         pf.setUpGUI();
     }
-
-
-
-
-
-
-
 }
