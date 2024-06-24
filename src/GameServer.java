@@ -41,11 +41,11 @@ public class GameServer {
         }
     }
 
-    public void acceptConnections(){
+    public void acceptConnections() {
         try {
             System.out.println("waiting for connections");
 
-            while (numPlayers < maxPlayers){
+            while (numPlayers < maxPlayers) {
                 Socket s = serverSocket.accept();
 
                 DataInputStream in = new DataInputStream(s.getInputStream());
@@ -74,7 +74,7 @@ public class GameServer {
                 }
             }
             System.out.println("No longer accepting connections");
-        } catch (IOException e){
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
@@ -83,7 +83,7 @@ public class GameServer {
         private int playerId;
         private DataInputStream dataIn;
 
-        public ReadFromClient(int pId, DataInputStream in){
+        public ReadFromClient(int pId, DataInputStream in) {
             playerId = pId;
             dataIn = in;
             System.out.println("RFC " + playerId + " Runnable created");
@@ -92,7 +92,7 @@ public class GameServer {
         @Override
         public void run() {
             try {
-                while (true){
+                while (true) {
                     playerX.set(playerId - 1, dataIn.readDouble());
                     playerY.set(playerId - 1, dataIn.readDouble());
                 }
@@ -106,7 +106,7 @@ public class GameServer {
         private int playerId;
         private DataOutputStream dataOut;
 
-        public WriteToClient(int pId, DataOutputStream out){
+        public WriteToClient(int pId, DataOutputStream out) {
             playerId = pId;
             dataOut = out;
             System.out.println("WTC " + playerId + " Runnable created");
@@ -115,9 +115,17 @@ public class GameServer {
         @Override
         public void run() {
             try {
-                while (true){
+                while (true) {
                     for (int i = 0; i < numPlayers; i++) {
                         if (i != playerId - 1) {
+                            if (playerX.get(i) > 300.0)
+                                playerX.set(i,300.0);
+                            else if (playerX.get(i) < 0)
+                                playerX.set(i,0.0);
+                            if (playerY.get(i) > 300.0)
+                                playerX.set(i,300.0);
+                            else if (playerY.get(i) < 0)
+                                playerY.set(i,0.0);
                             dataOut.writeDouble(playerX.get(i));
                             dataOut.writeDouble(playerY.get(i));
                         }
@@ -134,7 +142,7 @@ public class GameServer {
             }
         }
 
-        public void sendStartMsg(){
+        public void sendStartMsg() {
             try {
                 dataOut.writeUTF("We have " + maxPlayers + " players go!");
                 dataOut.flush();

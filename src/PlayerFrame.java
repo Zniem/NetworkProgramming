@@ -4,9 +4,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
@@ -133,8 +131,8 @@ public class PlayerFrame extends JFrame implements KeyListener {
     private void connectToServer() {
         try {
             socket = new Socket("localhost", 45371);
-            DataInputStream in = new DataInputStream(socket.getInputStream());
-            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+            ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+            ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
             playerId = in.readInt();
             System.out.println("You are player #" + playerId);
             if (playerId == 1) {
@@ -158,9 +156,9 @@ public class PlayerFrame extends JFrame implements KeyListener {
     }
 
     private class ReadFromServer implements Runnable {
-        private DataInputStream dataIn;
+        private ObjectInputStream dataIn;
 
-        public ReadFromServer(DataInputStream in) {
+        public ReadFromServer(ObjectInputStream in) {
             this.dataIn = in;
             System.out.println("RFS RUNNABLE CREATED");
         }
@@ -170,15 +168,13 @@ public class PlayerFrame extends JFrame implements KeyListener {
             try {
                 while (true) {
                     for (int i = 0; i < maxPlayers; i++) {
-                        double x = dataIn.readDouble();
-                        double y = dataIn.readDouble();
+                        PlayerSprite updatedPlayer = (PlayerSprite) dataIn.readObject();
                         if (i + 1 != playerId) {
-                            players.get(i).setX(x);
-                            players.get(i).setY(y);
+                            players.set(i, updatedPlayer);
                         }
                     }
                 }
-            } catch (IOException e) {
+            } catch (IOException | ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
         }
@@ -198,9 +194,9 @@ public class PlayerFrame extends JFrame implements KeyListener {
     }
 
     private class WriteToServer implements Runnable {
-        private DataOutputStream dataOut;
+        private ObjectOutputStream dataOut;
 
-        public WriteToServer(DataOutputStream out) {
+        public WriteToServer(ObjectOutputStream out) {
             this.dataOut = out;
             System.out.println("WTS RUNNABLE CREATED");
         }
@@ -209,8 +205,7 @@ public class PlayerFrame extends JFrame implements KeyListener {
         public void run() {
             try {
                 while (true) {
-                    dataOut.writeDouble(me.getX());
-                    dataOut.writeDouble(me.getY());
+                    dataOut.writeObject(me);
                     dataOut.flush();
                     try {
                         Thread.sleep(25);
@@ -225,7 +220,7 @@ public class PlayerFrame extends JFrame implements KeyListener {
     }
 
     public static void main(String[] args) {
-        PlayerFrame pf = new PlayerFrame(640, 480, 2);
+        PlayerFrame pf = new PlayerFrame(640, 480, 4); // Change 4 to your desired number of players
         pf.connectToServer();
         pf.setUpGUI();
     }
