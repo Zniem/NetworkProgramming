@@ -34,11 +34,13 @@ public class ClientHandler extends Thread {
             String message;
             while ((message = in.readLine()) != null) {
                 System.out.println("Received: " + message);
-                Pattern pattern = Pattern.compile("(f|s)+u+c+k+", Pattern.CASE_INSENSITIVE);
-                Matcher f_matcher = pattern.matcher(message);
-                if (f_matcher.find()){
-                    message =  f_matcher.replaceAll("duck");
+                Pattern pattern = Pattern.compile("(([fc]+[oue]+)|s+u+|d+i+)c+k+", Pattern.CASE_INSENSITIVE);
+                Matcher matcher = pattern.matcher(message);
+                if (matcher.find()){
+                    message =  matcher.replaceAll("****");
                 }
+
+
 
                 synchronized (ChatServer.chatLogs) {
                     ChatServer.chatLogs.add(message);
