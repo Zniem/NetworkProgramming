@@ -3,7 +3,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,7 +49,8 @@ public class ClientHandler extends Thread {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            // Client disconnected or encountered an error
+            System.err.println("Client disconnected: " + e.getMessage());
         } finally {
             try {
                 socket.close();
