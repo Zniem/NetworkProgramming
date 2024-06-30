@@ -24,6 +24,7 @@ public class ChatClient extends Application {
     private static Socket socket;
     private static TextArea messageArea;
     private TextArea inputArea;
+    private TextArea name;
 
     public static void main(String[] args) {
         launch(args);
@@ -40,6 +41,10 @@ public class ChatClient extends Application {
         inputArea = new TextArea();
         inputArea.setPrefRowCount(3);
         inputArea.setWrapText(true);
+
+        name = new TextArea();
+        name.setPrefRowCount(1);
+        name.setWrapText(true);
 
         Button sendButton = new Button("Send");
         sendButton.setOnAction(e -> sendMessage());
@@ -64,7 +69,11 @@ public class ChatClient extends Application {
         inputBox.setPadding(new Insets(10));
         inputBox.setPrefHeight(70); // Combined height for input area and button
 
-        VBox root = new VBox(10, messageArea, inputBox);
+        HBox nameBox = new HBox(10, name, sendButton);
+        nameBox.setAlignment(Pos.TOP_LEFT);
+        nameBox.setPadding(new Insets(10));
+
+        VBox root = new VBox(10,nameBox, messageArea, inputBox);
         root.setPadding(new Insets(10));
         VBox.setVgrow(messageArea, Priority.ALWAYS);
         VBox.setVgrow(inputBox, Priority.NEVER);
@@ -111,6 +120,7 @@ public class ChatClient extends Application {
     }
 
     private void sendMessage() {
+        inputArea.insertText(0, name.getText() + " : ");
         String message = inputArea.getText().trim();
         if (!message.isEmpty()) {
             out.println(message);
