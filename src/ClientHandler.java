@@ -4,6 +4,9 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class ClientHandler extends Thread {
     private Socket socket;
     private PrintWriter out;
@@ -31,6 +34,12 @@ public class ClientHandler extends Thread {
             String message;
             while ((message = in.readLine()) != null) {
                 System.out.println("Received: " + message);
+                Pattern pattern = Pattern.compile("(f|s)+u+c+k+", Pattern.CASE_INSENSITIVE);
+                Matcher matcher = pattern.matcher(message);
+                if (matcher.find()){
+                    matcher.
+                    System.out.println("match found");
+                }
                 synchronized (ChatServer.chatLogs) {
                     ChatServer.chatLogs.add(message);
                 }
