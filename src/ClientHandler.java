@@ -3,7 +3,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -34,10 +33,11 @@ public class ClientHandler extends Thread {
             String message;
             while ((message = in.readLine()) != null) {
                 System.out.println("Received: " + message);
+                // Example regex replacement for demonstration
                 Pattern pattern = Pattern.compile("(f|s)+u+c+k+", Pattern.CASE_INSENSITIVE);
                 Matcher f_matcher = pattern.matcher(message);
-                if (f_matcher.find()){
-                    message =  f_matcher.replaceAll("duck");
+                if (f_matcher.find()) {
+                    message = f_matcher.replaceAll("duck");
                 }
 
                 synchronized (ChatServer.chatLogs) {
@@ -50,7 +50,8 @@ public class ClientHandler extends Thread {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            // Client disconnected or encountered an error
+            System.err.println("Client disconnected: " + e.getMessage());
         } finally {
             try {
                 socket.close();
