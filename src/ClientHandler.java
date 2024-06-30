@@ -40,8 +40,6 @@ public class ClientHandler extends Thread {
                     message =  matcher.replaceAll("****");
                 }
 
-
-
                 synchronized (ChatServer.chatLogs) {
                     ChatServer.chatLogs.add(message);
                 }
